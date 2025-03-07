@@ -1,26 +1,47 @@
+
+require('dotenv').config();
 const express = require('express');
 const { createClient } = require('@supabase/supabase-js');
-
+const cors = require('cors');
 const app = express();
+
 app.use(express.json());
+app.use(cors());
 
 // Supabase setup
-const supabaseUrl = 'https://lgdabnwbjlgtkyurglrb.supabase.co'; // Replace with your Supabase URL
-const supabaseKey = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6ImxnZGFibndiamxndGt5dXJnbHJiIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NDEzNjM5NzMsImV4cCI6MjA1NjkzOTk3M30.uQ2TX8IE8ES36RrPo66aOUxEo3Vq5j3YpfFsLHMnpA0'; // Replace with your Supabase public API key
+const supabaseUrl = process.env.SUPABASE_URL; // Use environment variable
+const supabaseKey = process.env.SUPABASE_KEY; // Use environment variable
 const supabase = createClient(supabaseUrl, supabaseKey);
 
 // POST request to insert data
 app.post('/add-todo', async (req, res) => {
   const { task, is_completed } = req.body;
 
-  const { data, error } = await supabase
-    .from('todos') // Replace with your table name
-    .insert([{ task, is_completed }]);
+  try {
+    const { data, error } = await supabase
+      .from('todos') // Replace with your table name
+      .insert([{ task, is_completed }])
+      .select();
+   
+    if (error) throw error;
+    res.status(201).json({ data });
+  } catch (err) {
+    console.error('Error inserting data:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
 
-  if (error) return res.status(500).json({ error: error.message });
-  res.status(201).json({ data });
+// Error handling for uncaught exceptions and rejections
+process.on('uncaughtException', (err) => {
+  console.error('Uncaught Exception:', err);
+  process.exit(1);
+});
+
+process.on('unhandledRejection', (err) => {
+  console.error('Unhandled Rejection:', err);
+  process.exit(1);
 });
 
 // Start server
-const PORT = 3000;
+const PORT = process.env.PORT || 3000; // Use Render's PORT or fallback to 3000
 app.listen(PORT, () => console.log(`Server running on http://localhost:${PORT}`));
